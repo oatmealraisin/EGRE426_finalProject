@@ -20,11 +20,13 @@ public class pipelining {
 
     // The list of registers. Check the handout for which index is which.
     private ArrayList<Integer> registers = new ArrayList<Integer>(10);
+    // Flags to show if a register is being used or not.
+    private boolean[] free = new boolean[10];
     // Stores which instructions are in which stage.
     private Instruction IF, ID, EX, MEM, WB;
     // The mode is only used for deciding the algorithm, so in theory it could
     // be a boolean.
-    private int mode, pc = 0;
+    private int mode, pc = 0, counter = 0;
 
     // I'm doing this so that I don't have to worry about what is static and
     // what isn't, it really doesn't do anything beneficial
@@ -43,6 +45,9 @@ public class pipelining {
 	mode = Integer.parseInt(args[2]);
 
 	registers.set(0, 0);
+
+	for (int i = 0; i < 10; i++)
+	    free[i] = true;
 	Scanner scan = new Scanner(firstFile);
 
 	// Add each instruction to the array of instructions. This might be
@@ -68,15 +73,59 @@ public class pipelining {
     }
 
     private void runMode1() {
-	// Do stuff
+	boolean exit = true;
+
+	while (exit) {
+	    if (WB != null) {
+		free[WB.reg1] = true;
+		WB = null;
+
+		if (EX.command.equals("EXIT"))
+		    exit = false;
+	    }
+
+	    if (MEM != null) {
+
+	    }
+
+	    if (EX != null) {
+	    }
+
+	    if (ID != null) {
+		if (free[ID.reg2] && free[ID.reg3])
+		    ;// TODO
+		free[ID.reg1] = false;
+
+	    }
+
+	    if (IF != null) {
+		// Making the instruction counter higher than
+		// the limit, so no instructions are loaded.
+		if (IF.isBranch())
+		    pc = instructions.size() * 4;
+
+		IF = instructions.get(pc);
+	    }
+
+	    pc += 4;
+	    counter++;
+	}
     }
 
     private void runMode2() {
-	// Do stuff
+	// TODO:  Implement forwarding here
     }
 
     private void printpc() {
 	System.out.println("PC = " + pc);
+    }
+    
+    private void printreg(String reg) {
+	// TODO Finish printreg method
+    }
+    
+    private void printex() {
+	// TODO finish printex method
     }
 
     // This is going to represent each command in the program. They'll each
@@ -84,29 +133,91 @@ public class pipelining {
     private class Instruction {
 
 	// The command and then whatever else is after the command.
-	private String command, data;
+	String command, data;
 
 	// Each of the registers. There are going to be at max three, but not
 	// all of them have to be initialized.
-	private int reg1, reg2, reg3;
-	
+	int reg1, reg2, reg3;
+
 	// The immediate
-	private int immediate;
+	int immediate;
+
+	// To denote that this instruction may cause a jump, which would
+	// interrupt the pc
+	boolean branchFlag;
 
 	public Instruction(String instruction) {
 	    Scanner scan = new Scanner(instruction);
-	    String printCheck = scan.next();
-	    if (printCheck.equalsIgnoreCase("PRINTPC")
-		    || printCheck.equalsIgnoreCase("PRINTREG")
-		    || printCheck.equalsIgnoreCase("PRINTEX"))
-		command = printCheck;
-	    else
-		command = scan.next();
-	    data = scan.nextLine().trim();
+	    
+	    command = scan.next();
 
-	    // TODO: parse which registers are going to be used by this
-	    // instruction and put them in int form. How are we going to
-	    // implement stuff like 100($T1)?
+	    data = scan.nextLine().trim();
+	    scan.close();
+
+	    String[] params = data.split(",");
+
+	    if (params.length > 0) {
+		reg1 = parseReg(params[0]);
+
+		if (command.equals("J")) {
+		    scan = new Scanner(params[0]);
+		    immediate = scan.nextInt();
+		    scan.close();
+		}
+	    }
+
+	    if (params.length > 1) {
+		reg2 = parseReg(params[1]);
+
+		// Grabbing the immediate from LW, SW, MV, BEQZ, BNEZ
+
+		if (command.equals("LW") || command.equals("SW")
+			|| command.equals("MV") || command.equals("BEQZ")
+			|| command.equals("BNEZ")) {
+		    scan = new Scanner(params[1]);
+		    immediate = scan.nextInt();
+		    scan.close();
+		}
+
+	    }
+
+	    if (params.length > 2) {
+		reg2 = parseReg(params[2]);
+
+		// Grabbing the immediate from ADDI
+		if (command.equals("ADDI")) {
+		    scan = new Scanner(params[2]);
+		    immediate = scan.nextInt();
+		    scan.close();
+		}
+	    }
+	}
+
+	public boolean isBranch() {
+	    return (command.equals("J") || command.equals("BEQZ") || command
+		    .equals("BNEZ"));
+	}
+
+	private int parseReg(String firstParam) {
+	    if (firstParam.contains("$t0"))
+		return 1;
+	    if (firstParam.contains("$t1"))
+		return 2;
+	    if (firstParam.contains("$t2"))
+		return 3;
+	    if (firstParam.contains("$t3"))
+		return 4;
+	    if (firstParam.contains("$t4"))
+		return 5;
+	    if (firstParam.contains("$s0"))
+		return 6;
+	    if (firstParam.contains("$s1"))
+		return 7;
+	    if (firstParam.contains("$s2"))
+		return 8;
+	    if (firstParam.contains("$s3"))
+		return 9;
+	    return 0;
 	}
 
 	public String toString() {
