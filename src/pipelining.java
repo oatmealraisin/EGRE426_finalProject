@@ -20,10 +20,13 @@ public class pipelining {
 
     // The list of registers. Check the handout for which index is which.
     private ArrayList<Integer> registers = new ArrayList<Integer>(10);
+
     // Flags to show if a register is being used or not.
     private boolean[] free = new boolean[10];
+
     // Stores which instructions are in which stage.
     private Instruction IF, ID, EX, MEM, WB;
+
     // The mode is only used for deciding the algorithm, so in theory it could
     // be a boolean.
     private int mode, pc = 0, counter = 0;
@@ -89,12 +92,29 @@ public class pipelining {
 	    }
 
 	    if (EX != null) {
+		switch (EX.command) {
+		case "ADDI":
+		    break;
+		case "ADD":
+		    break;
+
+		}
+
 	    }
 
+	    // Decode stage
+	    // "Assume that source registers are read in the second half of the
+	    // decode stage
 	    if (ID != null) {
-		if (free[ID.reg2] && free[ID.reg3])
-		    ;// TODO
-		free[ID.reg1] = false;
+		if (free[ID.reg2] && free[ID.reg3]) {
+		    if (ID.writes()) {
+			free[ID.reg1] = false;
+		    }
+
+		    ID = IF;
+		} else {
+		    EX = null;
+		}
 
 	    }
 
@@ -113,17 +133,17 @@ public class pipelining {
     }
 
     private void runMode2() {
-	// TODO:  Implement forwarding here
+	// TODO: Implement forwarding here
     }
 
     private void printpc() {
 	System.out.println("PC = " + pc);
     }
-    
+
     private void printreg(String reg) {
 	// TODO Finish printreg method
     }
-    
+
     private void printex() {
 	// TODO finish printex method
     }
@@ -142,13 +162,9 @@ public class pipelining {
 	// The immediate
 	int immediate;
 
-	// To denote that this instruction may cause a jump, which would
-	// interrupt the pc
-	boolean branchFlag;
-
 	public Instruction(String instruction) {
 	    Scanner scan = new Scanner(instruction);
-	    
+
 	    command = scan.next();
 
 	    data = scan.nextLine().trim();
@@ -170,7 +186,6 @@ public class pipelining {
 		reg2 = parseReg(params[1]);
 
 		// Grabbing the immediate from LW, SW, MV, BEQZ, BNEZ
-
 		if (command.equals("LW") || command.equals("SW")
 			|| command.equals("MV") || command.equals("BEQZ")
 			|| command.equals("BNEZ")) {
@@ -198,6 +213,12 @@ public class pipelining {
 		    .equals("BNEZ"));
 	}
 
+	public boolean writes() {
+	    return command.equals("SLT") || command.equals("ADD")
+		    || command.equals("ADDI") || command.equals("LW")
+		    || command.equals("MV");
+	}
+
 	private int parseReg(String firstParam) {
 	    if (firstParam.contains("$t0"))
 		return 1;
@@ -220,6 +241,7 @@ public class pipelining {
 	    return 0;
 	}
 
+	@Override
 	public String toString() {
 	    return command + " " + data;
 	}
