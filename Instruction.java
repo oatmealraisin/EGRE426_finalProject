@@ -1,45 +1,44 @@
 import java.util.HashMap;
 
 import enums.InstructionKeys;
+import enums.Stage;
 
+/*
+ * Class to create an instruction. The instruction is stored in a map with 3 key:value pairs
+ * returning the pc, command type and the registers being used for the commands
+ */
 class Instruction {
-
-  // The command and then whatever else is after the command.
-  String command, data;
 
   HashMap<String, Object> instructionStatus = new HashMap<>();
 
+  Stage currentStage;
+
   public Instruction(String instruction) {
+
+    currentStage = Stage.IF;
 
     /*
      * Splits instruction into three parts. params[0] will contain the current pointer, params[1]
      * contains the instruction type, params[2] contains the registers where the instruction is
      * being done.
      * 
-     * Ex. 12 ADD $S2,$S2,$S3 params[0] = 12, params[1] = ADD, params[2] = $S2,$S2,$S3
+     * Ex. ADD $S2,$S2,$S3 params[0] = ADD, params[1] = $S2,$S2,$S3
      */
     String[] params = instruction.split(" ");
-
-    instructionStatus.put(InstructionKeys.PC.getKey(), params[0]);
-    instructionStatus.put(InstructionKeys.COMMAND_TYPE.getKey(), params[1]);
+    instructionStatus.put(InstructionKeys.COMMAND_TYPE.getKey(), params[0]);
 
     /*
      * Splits the registers
      * 
-     * Ex. $S2,$S2,$S3 registers[0] = $S2, registers[1] = $S2, registers[2] = $S3
+     * Ex. 12 ADD $S2,$S2,$S3 registers[0] = $S2, registers[1] = $S2, registers[2] = $S3
      */
-    String[] registers = params[2].split(",");
+    String[] registers = params[1].split(",");
 
     instructionStatus.put(InstructionKeys.REGISTERS.getKey(), registers);
-
-
   }
 
   @Override
   public String toString() {
-    if (command.equals("EXIT"))
-      return "NOP";
-
     // Create stringbuilder
     StringBuilder builder = new StringBuilder();
 
@@ -60,5 +59,13 @@ class Instruction {
 
     // Finally return
     return builder.toString();
+  }
+
+  public String returnStage() {
+    return currentStage.toString();
+  }
+
+  public void changeStage(Stage _stage) {
+    currentStage = _stage;
   }
 }

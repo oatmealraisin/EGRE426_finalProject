@@ -1,7 +1,12 @@
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Scanner;
+
+import com.sun.xml.internal.bind.v2.model.core.ID;
+
+import enums.Registers;
 
 /**
  * @author Ryan Murphy, Nachiket Chauhan
@@ -11,17 +16,14 @@ public class Pipelining {
 
   public static Pipelining pipline = new Pipelining();
 
+  private HashMap<String, Object> registers = new HashMap<>();
+  private HashMap<String, Object> memory = new HashMap<>();
+
   // The list of instructions
   private ArrayList<Instruction> instructions = new ArrayList<Instruction>();
 
-  // The list of registers. Check the handout for which index is which.
-  private ArrayList<Integer> registers = new ArrayList<Integer>(10);
-
   // Flags to show if a register is being used or not.
   private boolean[] free = new boolean[10];
-
-  // Stores which instructions are in which stage.
-  private Instruction IF, ID, EX, MEM, WB;
 
   // The mode is only used for deciding the algorithm, so in theory it could
   // be a boolean.
@@ -31,12 +33,32 @@ public class Pipelining {
   // what isn't, it really doesn't do anything beneficial
   public static void main(String[] args) {
     try {
+      pipline.initizalize();
       pipline.run(args);
     } catch (FileNotFoundException e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
     }
   }
+
+
+  // Initialize registers
+  public void initizalize() {
+    registers.put(Registers.ZERO.returnKey(), 0);
+
+    registers.put(Registers.T0.returnKey(), 0);
+    registers.put(Registers.T1.returnKey(), 0);
+    registers.put(Registers.T2.returnKey(), 0);
+    registers.put(Registers.T3.returnKey(), 0);
+    registers.put(Registers.T4.returnKey(), 0);
+
+    registers.put(Registers.S0.returnKey(), 0);
+    registers.put(Registers.S1.returnKey(), 0);
+    registers.put(Registers.S2.returnKey(), 0);
+    registers.put(Registers.S3.returnKey(), 0);
+  }
+
+
 
   public void run(String[] args) throws FileNotFoundException {
     File firstFile = new File(args[0]);
@@ -49,8 +71,7 @@ public class Pipelining {
       free[i] = true;
     Scanner scan = new Scanner(firstFile);
 
-    // Add each instruction to the array of instructions. This might be
-    // superfluous but fuck it.
+    // Add each instruction to the array of instructions.
     while (scan.hasNext()) {
       instructions.add(new Instruction(scan.nextLine()));
     }
@@ -58,8 +79,10 @@ public class Pipelining {
     scan.close();
     scan = new Scanner(secondFile);
 
+    // Extract all the values from memory
     while (scan.hasNext()) {
-      // I don't know what to do here
+      String[] memoryLine = scan.nextLine().split(" ");
+      memory.put(memoryLine[0], memoryLine[1]);
     }
 
     scan.close();
@@ -72,7 +95,16 @@ public class Pipelining {
   }
 
   private void runMode1() {
-    boolean exit = true;
+    boolean exit = false;
+
+    while (!exit) {
+
+      for (Instruction instruction : instructions) {
+
+
+
+      }
+    }
 
     while (exit) {
       if (WB != null) {

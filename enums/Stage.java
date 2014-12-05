@@ -1,46 +1,40 @@
 package enums;
+
 public enum Stage {
 
   /**
    * First stage
    */
-  IF,
+  IF("IF"),
 
   /**
    * Second stage
    */
-  ID,
+  ID("ID"),
 
   /**
    * Third stage
    */
-  EX,
+  EX("EX"),
 
   /**
    * Fourth stage
    */
-  MEM,
+  MEM("MEM"),
 
   /**
    * Fifth stage
    */
-  WB;
+  WB("WB");
 
-  public String returnStage(Stage _currentStage) {
+  String currentStage;
 
-    String currentStage = null;
-    switch (_currentStage) {
-      case IF:
-        currentStage = "IF";
-      case ID:
-        currentStage = "ID";
-      case EX:
-        currentStage = "EX";
-      case MEM:
-        currentStage = "MEM";
-      case WB:
-        currentStage = "WB";
-    }
+  Stage(String _currentStage) {
+    currentStage = _currentStage;
+  }
+
+  public String toString() {
     return currentStage;
+
   }
 }
