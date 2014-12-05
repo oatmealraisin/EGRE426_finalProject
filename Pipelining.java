@@ -30,6 +30,8 @@ public class Pipelining {
     // The mode is only used for deciding the algorithm, so in theory it could
     // be a boolean.
     private int mode, pc = 0, counter = 0;
+    
+    private Instruction IF, ID, EX, MEM, WB;
 
     // I'm doing this so that I don't have to worry about what is static and
     // what isn't, it really doesn't do anything beneficial
