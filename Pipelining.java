@@ -4,9 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
-import enums.InstructionKeys;
 import enums.Registers;
-import enums.Stage;
 
 /**
  * @author Ryan Murphy, Nachiket Chauhan
@@ -101,6 +99,7 @@ public class Pipelining {
 
   private void runMode1() {
 
+
   }
 
   private void runMode2() {
@@ -112,37 +111,18 @@ public class Pipelining {
   }
 
   // Gets the first register of the instruction.
-  private void printreg(Instruction PR) {
-    System.out.println(registers.get(((String[]) PR.instructionStatus
-        .get(InstructionKeys.REGISTERS))[0]));
+  private void printreg(String _registerName) {
+    System.out.println(registers.get(_registerName.replace("$", "")));
   }
 
   private void printex() {
     System.out.println("Clock cycle = " + counter);
 
-    String ifString = "IF: NOP", idString = "ID: NOP", exString = "EX: NOP", memString = "MEM: NOP", wbString =
-        "WB: NOP";
-
     // All instructions start out in IF, so this will break. Maybe use the
     // PC to check what's in IF? Is this always correct?
     for (Instruction temp : instructions) {
-      if (temp.currentStage == Stage.IF)
-        ifString = temp.toString();
-      if (temp.currentStage == Stage.ID)
-        idString = temp.toString();
-      if (temp.currentStage == Stage.EX)
-        exString = temp.toString();
-      if (temp.currentStage == Stage.MEM)
-        memString = temp.toString();
-      if (temp.currentStage == Stage.WB)
-        wbString = temp.toString();
+      System.out.println(temp.returnStage().toString() + temp.toString());
     }
-
-    System.out.println(ifString);
-    System.out.println(idString);
-    System.out.println(exString);
-    System.out.println(memString);
-    System.out.println(wbString);
 
   }
 }

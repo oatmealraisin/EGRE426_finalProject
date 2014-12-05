@@ -43,8 +43,7 @@ class Instruction {
     StringBuilder builder = new StringBuilder();
 
     // Use stringerbuilder to extract values from instructionStatus map
-    builder.append(instructionStatus.get(InstructionKeys.PC.getKey())).append(
-        instructionStatus.get(InstructionKeys.COMMAND_TYPE.getKey()));
+    builder.append(instructionStatus.get(InstructionKeys.COMMAND_TYPE.getKey()));
 
     String[] registers = (String[]) instructionStatus.get(InstructionKeys.REGISTERS.getKey());
 

@@ -50,22 +50,22 @@ public enum Stage {
     String stageName = null;
     switch (currentStage) {
       case 0:
-        stageName = "IF";
+        stageName = "IF: ";
         break;
       case 1:
-        stageName = "ID";
+        stageName = "ID: ";
         break;
       case 2:
-        stageName = "EX";
+        stageName = "EX: ";
         break;
       case 3:
-        stageName = "MEM";
+        stageName = "MEM: ";
         break;
       case 4:
-        stageName = "WB";
+        stageName = "WB: ";
         break;
       case 5:
-        stageName = "EXIT";
+        stageName = "EXIT: ";
         break;
     }
     return stageName;
