@@ -42,30 +42,30 @@ public class Pipelining {
 
   // Initialize registers
   public void initizalize() {
-    registers.put(Registers.ZERO.returnKey(), 0);
+    registers.put(Registers.ZERO.returnKey(), new Register(0));
 
-    registers.put(Registers.T0.returnKey(), 0);
-    registers.put(Registers.T1.returnKey(), 0);
-    registers.put(Registers.T2.returnKey(), 0);
-    registers.put(Registers.T3.returnKey(), 0);
-    registers.put(Registers.T4.returnKey(), 0);
+    registers.put(Registers.T0.returnKey(), new Register(0));
+    registers.put(Registers.T1.returnKey(), new Register(0));
+    registers.put(Registers.T2.returnKey(), new Register(0));
+    registers.put(Registers.T3.returnKey(), new Register(0));
+    registers.put(Registers.T4.returnKey(), new Register(0));
 
-    registers.put(Registers.S0.returnKey(), 0);
-    registers.put(Registers.S1.returnKey(), 0);
-    registers.put(Registers.S2.returnKey(), 0);
-    registers.put(Registers.S3.returnKey(), 0);
+    registers.put(Registers.S0.returnKey(), new Register(0));
+    registers.put(Registers.S1.returnKey(), new Register(0));
+    registers.put(Registers.S2.returnKey(), new Register(0));
+    registers.put(Registers.S3.returnKey(), new Register(0));
   }
 
   public void run(String[] args) throws FileNotFoundException {
-    File firstFile = new File(args[0]);
-    File secondFile = new File(args[1]);
+    File instructionFile = new File(args[0]);
+    File memoryFile = new File(args[1]);
     mode = Integer.parseInt(args[2]);
 
     registers.clear();
 
     for (int i = 0; i < 10; i++)
       free[i] = true;
-    Scanner scan = new Scanner(firstFile);
+    Scanner scan = new Scanner(instructionFile);
 
     // Add each instruction to the array of instructions.
     while (scan.hasNext()) {
@@ -73,7 +73,7 @@ public class Pipelining {
     }
 
     scan.close();
-    scan = new Scanner(secondFile);
+    scan = new Scanner(memoryFile);
 
     // Extract all the values from memory
     while (scan.hasNext()) {
@@ -99,11 +99,10 @@ public class Pipelining {
 
   private void runMode1() {
 
-
   }
 
   private void runMode2() {
-    // TODO: Implement forwarding here
+
   }
 
   private void printpc() {
@@ -118,8 +117,6 @@ public class Pipelining {
   private void printex() {
     System.out.println("Clock cycle = " + counter);
 
-    // All instructions start out in IF, so this will break. Maybe use the
-    // PC to check what's in IF? Is this always correct?
     for (Instruction temp : instructions) {
       System.out.println(temp.returnStage().toString() + temp.toString());
     }

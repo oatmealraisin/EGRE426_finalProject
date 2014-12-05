@@ -1,6 +1,5 @@
 import java.util.HashMap;
 
-import enums.InstructionKeys;
 import enums.Stage;
 
 /*
@@ -25,7 +24,7 @@ class Instruction {
      * Ex. ADD $S2,$S2,$S3 params[0] = ADD, params[1] = $S2,$S2,$S3
      */
     String[] params = instruction.split(" ");
-    instructionStatus.put(InstructionKeys.COMMAND_TYPE.getKey(), params[0]);
+    instructionStatus.put("command_type", params[0]);
 
     /*
      * Splits the registers
@@ -34,7 +33,7 @@ class Instruction {
      */
     String[] registers = params[1].split(",");
 
-    instructionStatus.put(InstructionKeys.REGISTERS.getKey(), registers);
+    instructionStatus.put("registers", registers);
   }
 
   @Override
@@ -43,9 +42,9 @@ class Instruction {
     StringBuilder builder = new StringBuilder();
 
     // Use stringerbuilder to extract values from instructionStatus map
-    builder.append(instructionStatus.get(InstructionKeys.COMMAND_TYPE.getKey()));
+    builder.append(instructionStatus.get("command_type"));
 
-    String[] registers = (String[]) instructionStatus.get(InstructionKeys.REGISTERS.getKey());
+    String[] registers = (String[]) instructionStatus.get("registers");
 
     // Combine the registers again
     for (String value : registers) {
