@@ -91,8 +91,9 @@ public class pipelining {
 		if (EX.command.equals("EXIT"))
 		    exit = false;
 
-		WB = MEM;
 	    }
+
+	    WB = MEM;
 
 	    if (MEM != null) {
 		switch (MEM.command) {
@@ -164,10 +165,29 @@ public class pipelining {
 	    }
 
 	    if (EX != null) {
-		IF = instructions.get(pc);
+		IF = instructions.get(pc / 4);
 	    }
 
-	    pc += 4;
+	    boolean printFlag = true;
+
+	    while (printFlag) {
+		pc += 4;
+
+		switch (instructions.get(pc / 4).command) {
+		case "PRINTPC":
+		    printpc();
+		    break;
+		case "PRINTREG":
+		    printreg(instructions.get(pc / 4));
+		    break;
+		case "PRINTEX":
+		    printex();
+		    break;
+		default:
+		    printFlag = false;
+		}
+	    }
+
 	    counter++;
 	}
     }
@@ -180,12 +200,43 @@ public class pipelining {
 	System.out.println("PC = " + pc);
     }
 
-    private void printreg(String reg) {
-	// TODO Finish printreg method
+    private void printreg(Instruction PR) {
+	System.out.println(registers.get(PR.reg1));
     }
 
     private void printex() {
-	// TODO finish printex method
+	System.out.println("Clock cycle = " + counter);
+
+	if (IF != null) {
+	    System.out.println("IF: " + IF.toString());
+	} else {
+	    System.out.println("IF: NOP");
+	}
+
+	if (ID != null) {
+	    System.out.println("ID: " + ID.toString());
+	} else {
+	    System.out.println("ID: NOP");
+	}
+
+	if (EX != null) {
+	    System.out.println("EX: " + EX.toString());
+	} else {
+	    System.out.println("EX: NOP");
+	}
+
+	if (MEM != null) {
+	    System.out.println("MEM: " + MEM.toString());
+	} else {
+	    System.out.println("MEM: NOP");
+	}
+
+	if (WB != null) {
+	    System.out.println("WB: " + WB.toString());
+	} else {
+	    System.out.println("WB: NOP");
+	}
+
     }
 
     // This is going to represent each command in the program. They'll each
@@ -283,6 +334,9 @@ public class pipelining {
 
 	@Override
 	public String toString() {
+	    if (command.equals("EXIT"))
+		return "NOP";
+
 	    return command + " " + data;
 	}
     }
