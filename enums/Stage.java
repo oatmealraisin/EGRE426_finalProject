@@ -5,36 +5,70 @@ public enum Stage {
   /**
    * First stage
    */
-  IF("IF"),
+  IF(0),
 
   /**
    * Second stage
    */
-  ID("ID"),
+  ID(1),
 
   /**
    * Third stage
    */
-  EX("EX"),
+  EX(2),
 
   /**
    * Fourth stage
    */
-  MEM("MEM"),
+  MEM(3),
 
   /**
    * Fifth stage
    */
-  WB("WB");
+  WB(4),
+  /**
+   * Done stage
+   */
+  EXIT(5);
 
-  String currentStage;
+  int currentStage;
 
-  Stage(String _currentStage) {
+  Stage(int _currentStage) {
     currentStage = _currentStage;
   }
 
-  public String toString() {
+  public void incrementStage() {
+    currentStage++;
+  }
+
+  public int getStage() {
     return currentStage;
+
+  }
+
+  public String toString() {
+    String stageName = null;
+    switch (currentStage) {
+      case 0:
+        stageName = "IF";
+        break;
+      case 1:
+        stageName = "ID";
+        break;
+      case 2:
+        stageName = "EX";
+        break;
+      case 3:
+        stageName = "MEM";
+        break;
+      case 4:
+        stageName = "WB";
+        break;
+      case 5:
+        stageName = "EXIT";
+        break;
+    }
+    return stageName;
 
   }
 }
