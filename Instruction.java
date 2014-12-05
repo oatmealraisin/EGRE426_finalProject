@@ -160,4 +160,11 @@ class Instruction {
       return "$s3";
     return "$zero";
   }
+
+  public String toString() {
+    if (command.equals("EXIT"))
+      return "NOP";
+
+    return command + " " + data;
+  }
 }

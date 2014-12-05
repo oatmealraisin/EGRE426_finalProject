@@ -153,7 +153,7 @@ public class Pipelining {
 
             } else {
               ID = IF;
-              IF = instructions.get(pc);
+              IF = instructions.get(pc / 4);
             }
             break;
 
@@ -165,7 +165,7 @@ public class Pipelining {
 
               } else {
                 ID = IF;
-                IF = instructions.get(pc);
+                IF = instructions.get(pc / 4);
               }
             }
             break;
@@ -178,7 +178,7 @@ public class Pipelining {
 
               } else {
                 ID = IF;
-                IF = instructions.get(pc);
+                IF = instructions.get(pc / 4);
               }
             }
             break;
