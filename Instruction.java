@@ -24,12 +24,20 @@ class Instruction {
     String reg1, reg2, reg3;
 
     // The immediate
-    int immediate;
+    int immediate, pc;
 
     public Instruction(String instruction) {
 	Scanner scan = new Scanner(instruction);
 
 	command = scan.next();
+
+	// Try to capture the pc that comes with each instruction
+	try {
+	    pc = Integer.parseInt(command);
+	    command = scan.next();
+	} catch (NumberFormatException e) {
+	    pc = -4;
+	}
 
 	data = scan.nextLine().trim();
 	scan.close();
@@ -100,28 +108,7 @@ class Instruction {
 
     @Override
     public String toString() {
-	// // Create stringbuilder
-	// StringBuilder builder = new StringBuilder();
-	//
-	// // Use stringerbuilder to extract values from instructionStatus map
-	// builder.append(instructionStatus.get(InstructionKeys.PC.getKey()))
-	// .append(instructionStatus.get(InstructionKeys.COMMAND_TYPE
-	// .getKey()));
-	//
-	// String[] registers = (String[]) instructionStatus
-	// .get(InstructionKeys.REGISTERS.getKey());
-	//
-	// // Combine the registers again
-	// for (String value : registers) {
-	// // For each register add a , after so something like 1,2,3,
-	// builder.append(value).append(",");
-	// }
-	//
-	// // Remove the last , because it is unneeded
-	// builder.deleteCharAt(builder.lastIndexOf(","));
-	//
-	// // Finally return
-	// return builder.toString();
+	return command + " " + data;
     }
 
     public String returnStage() {

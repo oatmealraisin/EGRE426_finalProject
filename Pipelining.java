@@ -220,7 +220,7 @@ public class Pipelining {
     }
 
     private void printpc() {
-	System.out.println("PC = " + pc);
+	System.out.println("PC = " + IF.pc);
     }
 
     // Gets the first register of the instruction.
