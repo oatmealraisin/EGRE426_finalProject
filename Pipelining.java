@@ -4,9 +4,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Scanner;
 
-import com.sun.xml.internal.bind.v2.model.core.ID;
-
-import enums.InstructionKeys;
 import enums.Registers;
 import enums.Stage;
 
@@ -18,8 +15,8 @@ public class Pipelining {
 
     public static Pipelining pipline = new Pipelining();
 
-    private HashMap<String, Object> registers = new HashMap<>();
-    private HashMap<String, Object> memory = new HashMap<>();
+    private HashMap<String, Register> registers = new HashMap<>();
+    private HashMap<Integer, Integer> memory = new HashMap<>();
 
     // The list of instructions
     private ArrayList<Instruction> instructions = new ArrayList<Instruction>();
@@ -30,7 +27,7 @@ public class Pipelining {
     // The mode is only used for deciding the algorithm, so in theory it could
     // be a boolean.
     private int mode, pc = 0, counter = 0;
-    
+
     private Instruction IF, ID, EX, MEM, WB;
 
     // I'm doing this so that I don't have to worry about what is static and
@@ -48,18 +45,18 @@ public class Pipelining {
 
     // Initialize registers
     public void initizalize() {
-	registers.put(Registers.ZERO.returnKey(), 0);
+	registers.put(Registers.ZERO.returnKey(), new Register(0));
 
-	registers.put(Registers.T0.returnKey(), 0);
-	registers.put(Registers.T1.returnKey(), 0);
-	registers.put(Registers.T2.returnKey(), 0);
-	registers.put(Registers.T3.returnKey(), 0);
-	registers.put(Registers.T4.returnKey(), 0);
+	registers.put(Registers.T0.returnKey(), new Register(0));
+	registers.put(Registers.T1.returnKey(), new Register(0));
+	registers.put(Registers.T2.returnKey(), new Register(0));
+	registers.put(Registers.T3.returnKey(), new Register(0));
+	registers.put(Registers.T4.returnKey(), new Register(0));
 
-	registers.put(Registers.S0.returnKey(), 0);
-	registers.put(Registers.S1.returnKey(), 0);
-	registers.put(Registers.S2.returnKey(), 0);
-	registers.put(Registers.S3.returnKey(), 0);
+	registers.put(Registers.S0.returnKey(), new Register(0));
+	registers.put(Registers.S1.returnKey(), new Register(0));
+	registers.put(Registers.S2.returnKey(), new Register(0));
+	registers.put(Registers.S3.returnKey(), new Register(0));
     }
 
     public void run(String[] args) throws FileNotFoundException {
@@ -84,7 +81,8 @@ public class Pipelining {
 	// Extract all the values from memory
 	while (scan.hasNext()) {
 	    String[] memoryLine = scan.nextLine().split(" ");
-	    memory.put(memoryLine[0], memoryLine[1]);
+	    memory.put(Integer.parseInt(memoryLine[0]),
+		    Integer.parseInt(memoryLine[1]));
 	}
 
 	scan.close();
@@ -100,15 +98,10 @@ public class Pipelining {
 	boolean exit = false;
 
 	while (!exit) {
-
-	}
-
-	// old code
-	while (!exit) {
 	    if (WB != null) {
 
 		if (WB.writes()) {
-		    free[WB.reg1] = true;
+		    registers.get(WB.reg1).setStatus(false);
 		}
 
 		switch (WB.command) {
@@ -125,14 +118,15 @@ public class Pipelining {
 	    if (MEM != null) {
 		switch (MEM.command) {
 		case "LW":
-		    registers
-			    .set(MEM.reg1, 0 /* Figure out memory stuff here */);
+		    registers.get(MEM.reg1).value = memory.get(registers
+			    .get(MEM.reg2).value + MEM.immediate);
 		    break;
 		case "MV":
-		    registers.set(MEM.reg1, MEM.immediate);
+		    registers.get(MEM.reg1).value = MEM.immediate;
 		    break;
 		case "SW":
-		    /* Figure out memory stuff here */
+		    memory.replace(registers.get(MEM.reg2).value
+			    + MEM.immediate, registers.get(MEM.reg1).value);
 		    break;
 		}
 
@@ -143,13 +137,16 @@ public class Pipelining {
 	    if (EX != null) {
 		switch (EX.command) {
 		case "ADDI":
-		    registers.set(EX.reg1, EX.reg2 + EX.immediate);
+		    registers.get(EX.reg1).value = registers.get(EX.reg2).value
+			    + EX.immediate;
 		    break;
 		case "ADD":
-		    registers.set(EX.reg1, EX.reg2 + EX.reg3);
+		    registers.get(EX.reg1).value = registers.get(EX.reg2).value
+			    + registers.get(EX.reg3).value;
 		    break;
 		case "SLT":
-		    registers.set(EX.reg1, EX.reg2 < EX.reg3 ? 1 : 0);
+		    registers.get(EX.reg1).value = registers.get(EX.reg2).value < registers
+			    .get(EX.reg3).value ? 1 : 0;
 		    break;
 		}
 
@@ -158,18 +155,15 @@ public class Pipelining {
 	    // Decode stage
 	    // "Assume that source registers are read in the second half of the
 	    // decode stage
-	    // This stage is a little bit more complicated because of memory
-	    // stuff
 	    if (ID != null) {
-		if (free[ID.reg2] && free[ID.reg3]) {
-		    // TODO: Maybe make a method to toggle free registers, so
-		    // that we don't lock registers like $zero
+		if (!registers.get(ID.reg2).getStatus()
+			&& !registers.get(ID.reg3).getStatus()) {
 		    if (ID.writes()) {
-			free[ID.reg1] = false;
+			registers.get(ID.reg1).setStatus(true);
 		    }
 
 		    if (ID.command.equals("SW")) {
-			free[ID.reg2] = false;
+			registers.get(ID.reg2).setStatus(true);
 		    }
 
 		    EX = ID;
@@ -195,6 +189,8 @@ public class Pipelining {
 		IF = instructions.get(pc / 4);
 	    }
 
+	    // This is for the prints. It uses a while loop because there can be
+	    // more than one in a row, and the pc shouldn't be changed.
 	    boolean printFlag = true;
 
 	    while (printFlag) {
@@ -229,8 +225,7 @@ public class Pipelining {
 
     // Gets the first register of the instruction.
     private void printreg(Instruction PR) {
-	System.out.println(registers.get(((String[]) PR.instructionStatus
-		.get(InstructionKeys.REGISTERS))[0]));
+	System.out.println(registers.get(PR.reg1));
     }
 
     private void printex() {

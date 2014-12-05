@@ -31,8 +31,6 @@ class Instruction {
 
 	command = scan.next();
 
-	currentStage = null;
-
 	data = scan.nextLine().trim();
 	scan.close();
 
@@ -119,19 +117,11 @@ class Instruction {
 	// builder.append(value).append(",");
 	// }
 	//
-	// // Remove the last , because it is unneeeded
+	// // Remove the last , because it is unneeded
 	// builder.deleteCharAt(builder.lastIndexOf(","));
 	//
 	// // Finally return
 	// return builder.toString();
-
-	StringBuilder builder = new StringBuilder();
-
-	builder.append(command);
-	builder.append(data);
-
-	return builder.toString();
-
     }
 
     public String returnStage() {
