@@ -122,13 +122,13 @@ class Instruction {
   // return builder.toString();
   // }
 
-  public String returnStage() {
-    return currentStage.toString();
-  }
-
-  public void changeStage(Stage _stage) {
-    currentStage = _stage;
-  }
+  // public String returnStage() {
+  // return currentStage.toString();
+  // }
+  //
+  // public void changeStage(Stage _stage) {
+  // currentStage = _stage;
+  // }
 
   public boolean isBranch() {
     return (command.equals("J") || command.equals("BEQZ") || command.equals("BNEZ"));

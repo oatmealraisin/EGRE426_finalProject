@@ -146,6 +146,42 @@ public class Pipelining {
             registers.get(EX.reg1).value =
                 registers.get(EX.reg2).value < registers.get(EX.reg3).value ? 1 : 0;
             break;
+          case "J":
+            pc = pc + 4 + 4 * IF.immediate;
+            if (IF != null) {
+              System.out.println("stall");
+
+            } else {
+              ID = IF;
+              IF = instructions.get(pc);
+            }
+            break;
+
+          case "BEQZ":
+            if (registers.get(IF.reg1).value == 0) {
+              pc = pc + 4 + 4 * IF.immediate;
+              if (IF != null) {
+                System.out.println("stall");
+
+              } else {
+                ID = IF;
+                IF = instructions.get(pc);
+              }
+            }
+            break;
+
+          case "BNEZ":
+            if (registers.get(IF.reg1).value != 0) {
+              pc = pc + 4 + 4 * IF.immediate;
+              if (IF != null) {
+                System.out.println("stall");
+
+              } else {
+                ID = IF;
+                IF = instructions.get(pc);
+              }
+            }
+            break;
         }
 
       }
@@ -177,27 +213,6 @@ public class Pipelining {
         // Making the instruction counter higher than
         // the limit, so no instructions are loaded.
         if (IF.isBranch()) {
-          switch (IF.command) {
-
-            case "J":
-              pc = pc + 4 + 4 * IF.immediate;
-              IF = instructions.get(pc);
-              break;
-
-            case "BEQZ":
-              if (registers.get(IF.reg1).value == 0) {
-                pc = pc + 4 + 4 * IF.immediate;
-                IF = instructions.get(pc);
-              }
-              break;
-
-            case "BNEZ":
-              if (registers.get(IF.reg1).value != 0) {
-                pc = pc + 4 + 4 * IF.immediate;
-                IF = instructions.get(pc);
-              }
-              break;
-          }
 
 
 
@@ -236,7 +251,7 @@ public class Pipelining {
   }
 
   private void runMode2() {
-    // TODO: Implement forwarding here
+
   }
 
   private void printpc() {
