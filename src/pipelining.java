@@ -80,24 +80,49 @@ public class pipelining {
 
 	while (exit) {
 	    if (WB != null) {
-		free[WB.reg1] = true;
-		WB = null;
+		if (WB.writes()) {
+		    free[WB.reg1] = true;
+		}
+
+		switch (WB.command) {
+
+		}
 
 		if (EX.command.equals("EXIT"))
 		    exit = false;
+
+		WB = MEM;
 	    }
 
 	    if (MEM != null) {
+		switch (MEM.command) {
+		case "LW":
+		    registers
+			    .set(MEM.reg1, 0 /* Figure out memory stuff here */);
+		    break;
+		case "MV":
+		    registers.set(MEM.reg1, MEM.immediate);
+		    break;
+		case "SW":
+		    /* Figure out memory stuff here */
+		    break;
+		}
 
 	    }
+
+	    MEM = EX;
 
 	    if (EX != null) {
 		switch (EX.command) {
 		case "ADDI":
+		    registers.set(EX.reg1, EX.reg2 + EX.immediate);
 		    break;
 		case "ADD":
+		    registers.set(EX.reg1, EX.reg2 + EX.reg3);
 		    break;
-
+		case "SLT":
+		    registers.set(EX.reg1, EX.reg2 < EX.reg3 ? 1 : 0);
+		    break;
 		}
 
 	    }
@@ -105,25 +130,40 @@ public class pipelining {
 	    // Decode stage
 	    // "Assume that source registers are read in the second half of the
 	    // decode stage
+	    // This stage is a little bit more complicated because of memory
+	    // stuff
 	    if (ID != null) {
 		if (free[ID.reg2] && free[ID.reg3]) {
+		    // TODO: Maybe make a method to toggle free registers, so
+		    // that we don't lock registers like $zero
 		    if (ID.writes()) {
 			free[ID.reg1] = false;
 		    }
 
+		    if (ID.command.equals("SW")) {
+			free[ID.reg2] = false;
+		    }
+
+		    EX = ID;
 		    ID = IF;
 		} else {
 		    EX = null;
 		}
 
+	    } else {
+		ID = IF;
 	    }
 
 	    if (IF != null) {
 		// Making the instruction counter higher than
 		// the limit, so no instructions are loaded.
-		if (IF.isBranch())
+		if (IF.isBranch()) {
 		    pc = instructions.size() * 4;
+		}
 
+	    }
+
+	    if (EX != null) {
 		IF = instructions.get(pc);
 	    }
 
