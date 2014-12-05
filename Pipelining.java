@@ -21,9 +21,6 @@ public class Pipelining {
     // The list of instructions
     private ArrayList<Instruction> instructions = new ArrayList<Instruction>();
 
-    // Flags to show if a register is being used or not.
-    private boolean[] free = new boolean[10];
-
     // The mode is only used for deciding the algorithm, so in theory it could
     // be a boolean.
     private int mode, pc = 0, counter = 0;
@@ -64,10 +61,9 @@ public class Pipelining {
 	File secondFile = new File(args[1]);
 	mode = Integer.parseInt(args[2]);
 
+	// Why are we clearing the map?
 	registers.clear();
 
-	for (int i = 0; i < 10; i++)
-	    free[i] = true;
 	Scanner scan = new Scanner(firstFile);
 
 	// Add each instruction to the array of instructions.
@@ -148,6 +144,43 @@ public class Pipelining {
 		    registers.get(EX.reg1).value = registers.get(EX.reg2).value < registers
 			    .get(EX.reg3).value ? 1 : 0;
 		    break;
+		case "J":
+		    pc = pc + 4 * IF.immediate;
+		    if (IF != null) {
+			System.out.println("stall");
+
+		    } else {
+			ID = IF;
+			IF = instructions.get(pc / 4);
+		    }
+		    break;
+
+		case "BEQZ":
+		    if (registers.get(IF.reg1).value == 0) {
+			pc = pc + 4 * IF.immediate;
+
+			if (IF != null) {
+			    System.out.println("stall");
+
+			} else {
+			    ID = IF;
+			    IF = instructions.get(pc / 4);
+			}
+		    }
+		    break;
+
+		case "BNEZ":
+		    if (registers.get(IF.reg1).value != 0) {
+			pc = pc + 4 * IF.immediate;
+			if (IF != null) {
+			    System.out.println("stall");
+
+			} else {
+			    ID = IF;
+			    IF = instructions.get(pc / 4);
+			}
+		    }
+		    break;
 		}
 
 	    }
@@ -180,7 +213,7 @@ public class Pipelining {
 		// Making the instruction counter higher than
 		// the limit, so no instructions are loaded.
 		if (IF.isBranch()) {
-		    pc = instructions.size() * 4;
+
 		}
 
 	    }

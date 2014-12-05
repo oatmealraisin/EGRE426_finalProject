@@ -1,7 +1,7 @@
 /**
- * If you need the command, it is under Instruction.command
- * The registers are in string  form, under Instruction.reg1, reg2, reg3.
- * The immediate, which can also be the byte offset for lw and sw, is Instruction.immediate.
+ * If you need the command, it is under Instruction.command The registers are in string form, under
+ * Instruction.reg1, reg2, reg3. The immediate, which can also be the byte offset for lw and sw, is
+ * Instruction.immediate.
  */
 
 import java.util.Scanner;
@@ -80,45 +80,6 @@ class Instruction {
 	}
     }
 
-    // public Instruction(String instruction) {
-    //
-    // Scanner scan;
-    //
-    // currentStage = Stage.IF;
-    //
-    // /*
-    // * Splits instruction into three parts. params[0] will contain the
-    // * current pointer, params[1] contains the instruction type, params[2]
-    // * contains the registers where the instruction is being done.
-    // *
-    // * Ex. ADD $S2,$S2,$S3 params[0] = ADD, params[1] = $S2,$S2,$S3
-    // */
-    // String[] params = instruction.split(" ");
-    //
-    // command = params[0];
-    //
-    // /*
-    // * Splits the registers
-    // *
-    // * Ex. 12 ADD $S2,$S2,$S3 registers[0] = $S2, registers[1] = $S2,
-    // * registers[2] = $S3
-    // */
-    // String[] registers = params[1].split(",");
-    // }
-
-    @Override
-    public String toString() {
-	return command + " " + data;
-    }
-
-    public String returnStage() {
-	return currentStage.toString();
-    }
-
-    public void changeStage(Stage _stage) {
-	currentStage = _stage;
-    }
-
     public boolean isBranch() {
 	return (command.equals("J") || command.equals("BEQZ") || command
 		.equals("BNEZ"));
@@ -150,5 +111,13 @@ class Instruction {
 	if (firstParam.contains("$s3"))
 	    return "$s3";
 	return "$zero";
+    }
+
+    @Override
+    public String toString() {
+	if (command.equals("EXIT"))
+	    return "NOP";
+
+	return command + " " + data;
     }
 }
