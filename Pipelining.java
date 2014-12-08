@@ -12,21 +12,38 @@ import enums.Registers;
  */
 public class Pipelining {
 
+    // Singleton
     public static Pipelining pipline = new Pipelining();
 
     private HashMap<String, Register> registers = new HashMap<>();
     private HashMap<Integer, Integer> memory = new HashMap<>();
 
     // The list of instructions
+    // Note: The index of the instruction does not correlate to the actual pc
+    // that it should have. Because of the print instructions, the pc is off.
+    // The correct pc of the instruction is stored in the actual instruction.
+    // Alternatively, there is a method that will calculate the pc.
     private ArrayList<Instruction> instructions = new ArrayList<Instruction>();
+
+    // This is used for the data forwarding. DataFlags contain a string for the
+    // register and a value for.. the value. They should be added in the ex or
+    // mem stage and removed in the wb stage.
     private ArrayList<DataFlag> dataFlags = new ArrayList<DataFlag>();
 
     // The mode is only used for deciding the algorithm, so in theory it could
-    // be a boolean.
+    // be a boolean. The counter keeps track of the number of cycles. The pc
+    // indexes the
+    // instructions, but is not the correct pc as far as the simulation goes.
     private int mode, pc = 0, counter = 0;
 
+    // The instructions at each stage of the pipeline. These are being executed,
+    // and they change the state of the machine based on what instruction they
+    // are. At the end of each stage, they should become the previous
+    // instruction. e.g., mem = ex at the end of the mem stage.
     private Instruction IF, ID, EX, MEM, WB;
 
+    // This flag means that there is a branch flag before the mem stage, and it
+    // keeps the IF stage from functioning, and keeps the pc from incrementing.
     boolean branchFlag = false;
 
     // I'm doing this so that I don't have to worry about what is static and
@@ -47,6 +64,7 @@ public class Pipelining {
 	registers.put(Registers.ZERO.returnKey(), new Register(0));
 
 	registers.put(Registers.T0.returnKey(), new Register(0));
+
 	registers.put(Registers.T1.returnKey(), new Register(0));
 	registers.put(Registers.T2.returnKey(), new Register(0));
 	registers.put(Registers.T3.returnKey(), new Register(0));
@@ -70,6 +88,7 @@ public class Pipelining {
 	    instructions.add(new Instruction(scan.nextLine()));
 	}
 
+	// By doing this we make sure that the program will end.
 	instructions.add(new Instruction("EXIT"));
 
 	scan.close();
@@ -91,11 +110,15 @@ public class Pipelining {
 
     }
 
+    // runMode1 is the program without data forwarding.
     private void runMode1() {
+
+	// Switch this to true to end the program.
 	boolean exit = false;
 
 	while (!exit) {
 
+	    // The writeback stage. Blocked registers should be unblocked here.
 	    if (WB != null) {
 
 		if (WB.writes()) {
@@ -138,6 +161,9 @@ public class Pipelining {
 	    // happen every cycle
 	    WB = MEM;
 
+	    // the memory section. Everything having to do with lw and sw should
+	    // happen here. Also, branches and jumps write the pc here,
+	    // according to the diagram.
 	    if (MEM != null) {
 		switch (MEM.command) {
 
@@ -147,6 +173,10 @@ public class Pipelining {
 			    registers.get(MEM.reg1).value);
 		    break;
 		case "J":
+
+		    // This is kind of complicated. We need to get the pc that
+		    // is accurate to the simulation, at 4+4j, and then convert
+		    // it back to the index for our arraylist.
 		    pc = getRealPC(getFakePC() + 4 + 4 * MEM.immediate);
 
 		    branchFlag = false;
@@ -156,17 +186,17 @@ public class Pipelining {
 		    if (registers.get(MEM.reg1).value == 0) {
 			if (getRealPC(getFakePC() + 4 + 4 * MEM.immediate) / 4 < instructions
 				.size())
-			    pc = pc + 4 + 4 * MEM.immediate;
+			    pc = getRealPC(getFakePC() + 4 + 4 * MEM.immediate);
 
 			branchFlag = false;
 		    }
 		    break;
 
 		case "BNEZ":
-		    if (registers.get(IF.reg1).value != 0) {
+		    if (registers.get(MEM.reg1).value != 0) {
 			if (getRealPC(getFakePC() + 4 + 4 * MEM.immediate) / 4 < instructions
 				.size())
-			    pc = pc + 4 + 4 * MEM.immediate;
+			    pc = getRealPC(getFakePC() + 4 + 4 * MEM.immediate);
 			branchFlag = false;
 		    }
 		    break;
@@ -185,24 +215,33 @@ public class Pipelining {
 	    // Decode stage
 	    // "Assume that source registers are read in the second half of the
 	    // decode stage
+
+	    // Registers should be blocked in this stage, and branch flag should
+	    // be set here. This is a kinda complicated one.
 	    if (ID != null) {
 		if (!(registers.get(ID.reg2).getStatus() || registers.get(
 			ID.reg3).getStatus())
-			|| (ID.command.equals("SW") && !registers.get(ID.reg1).used)) {
+			|| (ID.command.equals("SW") && !registers.get(ID.reg1)
+				.getStatus())) {
 
+		    // Instruction.writes() is a good way to see if you need to
+		    // lock any registers.
 		    if (ID.writes()) {
 			registers.get(ID.reg1).setStatus(true);
 		    }
 
+		    // We set EX here because we don't want instructions to
+		    // progress if their registers are locked. Also, we don't
+		    // want ID to progress if it's locked.
 		    EX = ID;
 		    ID = IF;
 
+		    // This will prevent the jump/branch from being duplicated.
 		    if (branchFlag)
 			IF = null;
 
 		} else {
-		    // Because this stage also handles passing instructions onto
-		    // the next, we have to manage when it is null, too
+		    // if the ID doesn't move on, the ex needs to be null
 		    EX = null;
 		}
 	    } else {
@@ -220,14 +259,16 @@ public class Pipelining {
 
 	    }
 
-	    // If EX is null, that means we have a stall. So no more
+	    // If EX is null, that means we have a stall. If the counter is 0 or
+	    // 1, we should load an instruction. If the branch is finished, we
+	    // should load an instruction.
 	    if ((EX != null || counter == 0 || counter == 1 || (WB != null && WB
 		    .isBranch())) && !branchFlag) {
 		IF = instructions.get(pc / 4);
 	    }
 
 	    // This is for the prints. It uses a while loop because there can be
-	    // more than one in a row, and the pc shouldn't be changed.
+	    // more than one in a row.
 	    boolean printFlag = true;
 
 	    while (printFlag && !branchFlag) {
@@ -254,11 +295,14 @@ public class Pipelining {
     }
 
     private void runMode2() {
+	// Switch this to true to end the program.
 	boolean exit = false;
-	boolean dataFlag;
 
 	while (!exit) {
+	    // Used to hold the correct register value for some instructions
+	    int firstFlagValue, secondFlagValue;
 
+	    // The writeback stage. Blocked registers should be unblocked here.
 	    if (WB != null) {
 
 		if (WB.writes()) {
@@ -266,19 +310,91 @@ public class Pipelining {
 		}
 
 		switch (WB.command) {
-		case "ADDI":
-		    registers.get(EX.reg1).value = registers.get(EX.reg2).value
-			    + EX.immediate;
-		    break;
 		case "ADD":
-		    registers.get(EX.reg1).value = registers.get(EX.reg2).value
-			    + registers.get(EX.reg3).value;
+
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(WB.reg1)
+			    && dataFlags.get(0).data == registers.get(WB.reg2).value
+				    + registers.get(WB.reg3).value)
+			dataFlags.remove(0);
+
+		    if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(WB.reg1)
+			    && dataFlags.get(1).data == registers.get(WB.reg2).value
+				    + registers.get(WB.reg3).value)
+			dataFlags.remove(1);
+
+		    registers.get(WB.reg1).value = registers.get(WB.reg2).value
+			    + registers.get(WB.reg3).value;
+		    break;
+		// Move an immediate to a register. MV will alway be an
+		// immediate
+		case "MV":
+
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(WB.reg1)
+			    && dataFlags.get(0).data == WB.immediate)
+			dataFlags.remove(0);
+
+		    if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(WB.reg1)
+			    && dataFlags.get(1).data == WB.immediate)
+			dataFlags.remove(1);
+
+		    registers.get(WB.reg1).value = WB.immediate;
+
 		    break;
 		case "SLT":
-		    registers.get(EX.reg1).value = registers.get(EX.reg2).value < registers
-			    .get(EX.reg3).value ? 1 : 0;
+
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(WB.reg1)
+			    && dataFlags.get(0).data == (registers.get(WB.reg2).value < registers
+				    .get(WB.reg3).value ? 1 : 0))
+			dataFlags.remove(0);
+
+		    if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(WB.reg1)
+			    && dataFlags.get(1).data == (registers.get(WB.reg2).value < registers
+				    .get(WB.reg3).value ? 1 : 0))
+			dataFlags.remove(1);
+
+		    registers.get(WB.reg1).value = registers.get(WB.reg2).value < registers
+			    .get(WB.reg3).value ? 1 : 0;
+		    break;
+		case "ADDI":
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(WB.reg1)
+			    && dataFlags.get(0).data == registers.get(WB.reg2).value
+				    + WB.immediate)
+			dataFlags.remove(0);
+
+		    if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(WB.reg1)
+			    && dataFlags.get(1).data == registers.get(WB.reg2).value
+				    + WB.immediate)
+			dataFlags.remove(1);
+
+		    registers.get(WB.reg1).value = registers.get(WB.reg2).value
+			    + WB.immediate;
 		    break;
 
+		// Load some memory into a register. Unknown what will happen if
+		// the location doesn't exist
+		case "LW":
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(WB.reg1)
+			    && dataFlags.get(0).data == memory.get(registers
+				    .get(WB.reg2).value + WB.immediate))
+			dataFlags.remove(0);
+
+		    if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(WB.reg1)
+			    && dataFlags.get(1).data == memory.get(registers
+				    .get(WB.reg2).value + WB.immediate))
+			dataFlags.remove(1);
+		    registers.get(WB.reg1).value = memory.get(registers
+			    .get(WB.reg2).value + WB.immediate);
+		    break;
 		case "EXIT":
 		    exit = true;
 		    break;
@@ -290,53 +406,44 @@ public class Pipelining {
 	    // happen every cycle
 	    WB = MEM;
 
+	    // the memory section. Everything having to do with lw and sw should
+	    // happen here. Also, branches and jumps write the pc here,
+	    // according to the diagram.
 	    if (MEM != null) {
 		switch (MEM.command) {
 
-		// Load some memory into a register. Unknown what will happen if
-		// the location doesn't exist
-		case "LW":
-		    dataFlags.add(new DataFlag(MEM.reg1, memory.get(registers
-			    .get(MEM.reg2).value + MEM.immediate)));
-		    dataFlag = true;
-		    break;
-
-		// Move an immediate to a register. MV will alway be an
-		// immediate
-		case "MV":
-		    dataFlags.add(new DataFlag(MEM.reg1, MEM.immediate));
-		    dataFlag = true;
-		    break;
-
 		// Save a register to the proper memory location
 		case "SW":
-		    memory.put(registers.get(MEM.reg2).value + MEM.immediate,
-			    registers.get(MEM.reg1).value);
-		    break;
-		case "J":
-		    pc = pc + 4 + 4 * MEM.immediate;
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg1))
+			firstFlagValue = dataFlags.get(0).data;
 
-		    branchFlag = false;
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg1))
+			firstFlagValue = dataFlags.get(1).data;
+
+		    else
+			firstFlagValue = registers.get(EX.reg1).value;
+
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg2))
+			secondFlagValue = dataFlags.get(0).data;
+
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg2))
+			secondFlagValue = dataFlags.get(1).data;
+
+		    else
+			secondFlagValue = registers.get(EX.reg2).value;
+
+		    memory.put(secondFlagValue + MEM.immediate, firstFlagValue);
 		    break;
 
-		case "BEQZ":
-		    if (registers.get(MEM.reg1).value == 0) {
-			if ((pc + 4 + 4 * MEM.immediate) / 4 < instructions
-				.size())
-			    pc = pc + 4 + 4 * MEM.immediate;
-
-			branchFlag = false;
-		    }
+		case "LW":
+		    dataFlags.add(new DataFlag(MEM.reg1, memory.get(registers
+			    .get(WB.reg2).value + WB.immediate)));
 		    break;
 
-		case "BNEZ":
-		    if (registers.get(MEM.reg1).value != 0) {
-			if ((pc + 4 + 4 * MEM.immediate) / 4 < instructions
-				.size())
-			    pc = pc + 4 + 4 * MEM.immediate;
-			branchFlag = false;
-		    }
-		    break;
 		}
 	    }
 
@@ -344,70 +451,231 @@ public class Pipelining {
 
 	    if (EX != null) {
 		switch (EX.command) {
+
 		case "ADDI":
-		    dataFlags.add(new DataFlag(EX.reg1,
-			    registers.get(EX.reg2).value + EX.immediate));
-		    dataFlag = true;
+		    // If we need one of the flags..
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg2))
+			firstFlagValue = dataFlags.get(0).data;
+
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg2))
+			firstFlagValue = dataFlags.get(1).data;
+
+		    else
+			firstFlagValue = registers.get(EX.reg2).value;
+
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg1))
+			dataFlags.get(0).data = firstFlagValue + EX.immediate;
+
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg1))
+			dataFlags.get(1).data = firstFlagValue + EX.immediate;
+		    else
+			dataFlags.add(new DataFlag(EX.reg1, firstFlagValue
+				+ EX.immediate));
+
 		    break;
 		case "ADD":
-		    dataFlags.add(new DataFlag(EX.reg1,
-			    registers.get(EX.reg2).value
-				    + registers.get(EX.reg3).value));
-		    dataFlag = true;
-		    break;
-		case "SLT":
-		    dataFlags.add(new DataFlag(EX.reg1,
-			    registers.get(EX.reg2).value < registers
-				    .get(EX.reg3).value ? 1 : 0));
-		    dataFlag = true;
+		    // We may need another flag value for ADD, because it as two
+		    // registers.
+
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg2))
+			firstFlagValue = dataFlags.get(0).data;
+
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg2))
+			firstFlagValue = dataFlags.get(1).data;
+
+		    else
+			firstFlagValue = registers.get(EX.reg2).value;
+
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg3))
+			secondFlagValue = dataFlags.get(0).data;
+
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg3))
+			secondFlagValue = dataFlags.get(1).data;
+
+		    else
+			secondFlagValue = registers.get(EX.reg3).value;
+
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg1))
+			dataFlags.get(0).data = firstFlagValue
+				+ secondFlagValue;
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg1))
+			dataFlags.get(1).data = firstFlagValue
+				+ secondFlagValue;
+		    else
+			dataFlags.add(new DataFlag(EX.reg1, firstFlagValue
+				+ EX.immediate));
 		    break;
 
+		case "SLT":
+
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg2))
+			firstFlagValue = dataFlags.get(0).data;
+
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg2))
+			firstFlagValue = dataFlags.get(1).data;
+
+		    else
+			firstFlagValue = registers.get(EX.reg2).value;
+
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg3))
+			secondFlagValue = dataFlags.get(0).data;
+
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg3))
+			secondFlagValue = dataFlags.get(1).data;
+
+		    else
+			secondFlagValue = registers.get(EX.reg3).value;
+
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg1))
+			dataFlags.get(0).data = firstFlagValue < secondFlagValue ? 1
+				: 0;
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg1))
+			dataFlags.get(1).data = firstFlagValue < secondFlagValue ? 1
+				: 0;
+		    else
+			dataFlags.add(new DataFlag(EX.reg1,
+				firstFlagValue < secondFlagValue ? 1 : 0));
+
+		    break;
+
+		// Should this go in instruction decode?
+		case "MV":
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg1))
+			dataFlags.get(0).data = EX.immediate;
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg1))
+			dataFlags.get(1).data = EX.immediate;
+		    else
+			dataFlags.add(new DataFlag(EX.reg1, EX.immediate));
+		    break;
+
+		// I've moved these down here because they finish their
+		// stuff in
+		// the execution phase.
+		case "J":
+
+		    // This is kind of complicated. We need to get the pc that
+		    // is accurate to the simulation, at 4+4j, and then convert
+		    // it back to the index for our arraylist.
+		    pc = getRealPC(getFakePC() + 4 + 4 * MEM.immediate);
+
+		    branchFlag = false;
+		    break;
+
+		case "BEQZ":
+		    firstFlagValue = 0;
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg1))
+			firstFlagValue = dataFlags.get(0).data;
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg1))
+			firstFlagValue = dataFlags.get(1).data;
+		    else
+			firstFlagValue = registers.get(EX.reg1).value;
+
+		    if (firstFlagValue == 0) {
+			if (getRealPC(getFakePC() + 4 + 4 * EX.immediate) / 4 < instructions
+				.size())
+			    pc = getRealPC(getFakePC() + 4 + 4 * EX.immediate);
+
+			branchFlag = false;
+		    }
+		    break;
+
+		case "BNEZ":
+
+		    firstFlagValue = 0;
+
+		    if (dataFlags.size() > 0
+			    && dataFlags.get(0).register.equals(EX.reg1))
+			firstFlagValue = dataFlags.get(0).data;
+		    else if (dataFlags.size() > 1
+			    && dataFlags.get(1).register.equals(EX.reg1))
+			firstFlagValue = dataFlags.get(1).data;
+		    else
+			firstFlagValue = registers.get(EX.reg1).value;
+
+		    if (firstFlagValue != 0) {
+			if (getRealPC(getFakePC() + 4 + 4 * EX.immediate) / 4 < instructions
+				.size())
+			    pc = getRealPC(getFakePC() + 4 + 4 * EX.immediate);
+			branchFlag = false;
+		    }
+		    break;
 		}
 	    }
 
 	    // Decode stage
 	    // "Assume that source registers are read in the second half of the
 	    // decode stage
+
+	    // Registers should be blocked in this stage, and branch flag should
+	    // be set here. This is a kinda complicated one.
 	    if (ID != null) {
 		if (checkRegisters()) {
 
+		    // Instruction.writes() is a good way to see if you need to
+		    // lock any registers.
 		    if (ID.writes()) {
 			registers.get(ID.reg1).setStatus(true);
 		    }
 
+		    // We set EX here because we don't want instructions to
+		    // progress if their registers are locked. Also, we don't
+		    // want ID to progress if it's locked.
 		    EX = ID;
 		    ID = IF;
 
+		    // This will prevent the jump/branch from being duplicated.
 		    if (branchFlag)
 			IF = null;
 
 		} else {
+		    // if the ID doesn't move on, the ex needs to be null
 		    EX = null;
 		}
+	    } else {
+		EX = null;
+		ID = IF;
 	    }
 
 	    if (IF != null) {
-		// Making the instruction counter higher than
-		// the limit, so no instructions are loaded.
 
+		// Flagging so that unwanted instructions aren't loaded into
+		// memory
 		if (IF.isBranch()) {
 		    branchFlag = true;
 		}
 
 	    }
 
-	    if (counter == 1) {
-		ID = IF;
-	    }
-
-	    // If EX is null, that means we have a stall. So no more
-	    if ((EX != null || counter == 0 || counter == 1 || (WB != null && WB
+	    // If EX is null, that means we have a stall. If the counter is 0 or
+	    // 1, we should load an instruction. If the branch is finished, we
+	    // should load an instruction.
+	    if ((EX != null || counter == 0 || counter == 1 || (MEM != null && MEM
 		    .isBranch())) && !branchFlag) {
 		IF = instructions.get(pc / 4);
 	    }
 
 	    // This is for the prints. It uses a while loop because there can be
-	    // more than one in a row, and the pc shouldn't be changed.
+	    // more than one in a row.
 	    boolean printFlag = true;
 
 	    while (printFlag && !branchFlag) {
@@ -443,6 +711,10 @@ public class Pipelining {
     }
 
     // This is used for calculating the "PC" without the print functions.
+    // We need this because the pc counter in the loop doesn't represent the
+    // simulated pc.
+
+    // TODO: Actually, we could just get the pc from the last used instruction.
     private int getFakePC() {
 
 	int tempPC = 0;
@@ -462,6 +734,8 @@ public class Pipelining {
 	return tempPC;
     }
 
+    // Does the same as getFakePC, except backwards. This is used for jump
+    // commands, so that we can calculate where it wants to go.
     private int getRealPC(int fakeTarget) {
 	int result;
 
@@ -480,20 +754,35 @@ public class Pipelining {
 	return result - 4;
     }
 
+    // This checks to see if a IF can move on, by checking the dataFlags and the
+    // actual registers.
     private boolean checkRegisters() {
-	boolean flagOneOk, flagTwoOk;
+	boolean flagOneOk, flagTwoOk, flagSW;
+
+	if (IF == null)
+	    return false;
 
 	flagOneOk = !registers.get(IF.reg2).used
-		|| (dataFlags.size() >= 1 && dataFlags.get(0).register
+		|| (dataFlags.size() > 0 && dataFlags.get(0).register
 			.equals(IF.reg2))
-		|| (dataFlags.size() >= 2 && dataFlags.get(1).register
+		|| (dataFlags.size() > 1 && dataFlags.get(1).register
 			.equals(IF.reg2));
 	flagTwoOk = !registers.get(IF.reg3).used
-		|| (dataFlags.size() >= 1 && dataFlags.get(0).register
+		|| (dataFlags.size() > 0 && dataFlags.get(0).register
 			.equals(IF.reg3))
-		|| (dataFlags.size() >= 2 && dataFlags.get(1).register
+		|| (dataFlags.size() > 1 && dataFlags.get(1).register
 			.equals(IF.reg3));
-	return flagOneOk && flagTwoOk;
+
+	if (IF.command.equals("SW"))
+	    flagSW = !registers.get(IF.reg1).used
+		    || (dataFlags.size() > 0 && dataFlags.get(0).register
+			    .equals(IF.reg1))
+		    || (dataFlags.size() > 1 && dataFlags.get(1).register
+			    .equals(IF.reg1));
+	else
+	    flagSW = true;
+
+	return flagOneOk && flagTwoOk && flagSW;
     }
 
     private void printex() {
@@ -529,6 +818,9 @@ public class Pipelining {
 	}
     }
 
+    // A flag for the data forwarding. These contain the register the flag is
+    // for, and the data needed. the IF will pick these up, and it will allow
+    // instructions to move forward.
     private class DataFlag {
 	String register;
 	int data;
